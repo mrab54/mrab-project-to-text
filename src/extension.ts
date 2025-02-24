@@ -1,95 +1,6 @@
 import * as vscode from "vscode";
 import { generateStructuredText } from "./generate";
 
-export function activate(context: vscode.ExtensionContext) {
-  // Read config file (project-to-text.json) if it exists
-  // const config = getProjectConfig(); // (function defined later)
-  const config = vscode.workspace.getConfiguration("projectToText");
-  const includeGlobs = config.get<string[]>("include") ?? ["**/*"];
-  const excludeGlobs = config.get<string[]>("exclude") ?? [
-    "**/node_modules/**",
-    "**/.git/**",
-  ];
-
-  // Use these patterns in your file-finding logic...
-  // For example:
-  // const uris = await vscode.workspace.findFiles(
-  //   includeGlobs.join(','),
-  //   excludeGlobs.join(',')
-  // );
-
-  // 2. Register event to re-load config if it changes (optional)
-  vscode.workspace.onDidChangeConfiguration((event) => {
-    if (event.affectsConfiguration("projectToText")) {
-      // Re-read the updated config
-      const newConfig = vscode.workspace.getConfiguration("projectToText");
-      const newInclude = newConfig.get<string[]>("include");
-      const newExclude = newConfig.get<string[]>("exclude");
-      // Possibly rebuild your tree or refresh your extension state
-      vscode.window.showInformationMessage("Project to Text config updated!");
-    }
-  });
-
-  // Create and register TreeDataProvider for the file selection view
-  const treeDataProvider = new ProjectFileProvider(includeGlobs, excludeGlobs);
-  vscode.window.registerTreeDataProvider("projectToTextView", treeDataProvider);
-  // The 'projectToTextView' ID is defined in package.json under contributes.views
-
-  // Register a command to toggle file selection (when a tree item is clicked)
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "projectToText.toggleFile",
-      (node: FileNode) => {
-        treeDataProvider.toggleFile(node);
-      }
-    )
-  );
-  // Register command for generating output (from command palette or from a button in the UI)
-  context.subscriptions.push(
-    vscode.commands.registerCommand("projectToText.generate", async () => {
-      // Use currently selected files from the tree provider, or all included by default
-      const filesToInclude = treeDataProvider.getSelectedFiles();
-      const outputText = await generateStructuredText(filesToInclude);
-      // Open the output in a new unsaved document
-      const doc = await vscode.workspace.openTextDocument({
-        content: outputText,
-        language: "plaintext",
-      });
-      await vscode.window.showTextDocument(doc, { preview: false });
-    })
-  );
-  context.subscriptions.push(
-    // (This approach is optional, if we want a command to manually pick files each time)
-    vscode.commands.registerCommand("projectToText.generateQuick", async () => {
-      // list all files (using same include/exclude logic)
-      const files = await vscode.workspace.findFiles(
-        "**/*",
-        "**/node_modules/**"
-      );
-      const items = files.map((uri) => {
-        const rel = vscode.workspace.asRelativePath(uri);
-        return { label: rel, uri: uri, picked: true }; // QuickPickItem with pre-selected
-      });
-      const selection = await vscode.window.showQuickPick(items, {
-        canPickMany: true,
-        title: "Select files to include",
-        placeHolder: "Choose files for Project to Text output",
-      });
-      if (!selection) return; // cancelled
-      const chosenUris = selection
-        .filter((item) => !!item)
-        .map((item) => item.uri);
-      const outputText = await generateStructuredText(chosenUris);
-      const doc = await vscode.workspace.openTextDocument({
-        content: outputText,
-        language: "plaintext",
-      });
-      vscode.window.showTextDocument(doc);
-    })
-  );
-}
-
-////////////////////////////////
 class FileNode extends vscode.TreeItem {
   public children: FileNode[] | undefined;
   public selected: boolean;
@@ -102,17 +13,29 @@ class FileNode extends vscode.TreeItem {
   ) {
     super(label, collapsibleState);
     this.selected = selected;
-    this.resourceUri = uri; // so VS Code may show file icon
+    this.resourceUri = uri;
     this.tooltip = uri.fsPath;
-    // Show a check or unchecked indicator in the label to denote selection
-    this.description = this.selected ? "✓" : ""; // or prepend in label, as desired
-    // If directory, use collapsibleState to show children.
-    // If file, make collapsibleState = None.
-    // We can also set contextValue to differentiate file vs folder for conditional commands.
+    this.description = this.selected ? "✓" : "";
+    // Set contextValue asynchronously (see below)
+    this.setContextValue();
+  }
+
+  // Asynchronous method to set the contextValue
+  private async setContextValue() {
+    this.contextValue = (await isDirectory(this.uri)) ? "directory" : "file";
   }
 }
 
-///////////////////////////////
+// Use async/await for isDirectory
+async function isDirectory(uri: vscode.Uri): Promise<boolean> {
+  try {
+    const stat = await vscode.workspace.fs.stat(uri);
+    return stat.type === vscode.FileType.Directory;
+  } catch {
+    return false;
+  }
+}
+
 class ProjectFileProvider implements vscode.TreeDataProvider<FileNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
     FileNode | undefined
@@ -120,125 +43,160 @@ class ProjectFileProvider implements vscode.TreeDataProvider<FileNode> {
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private rootNodes: FileNode[] = [];
-  // We might maintain a map of file path -> FileNode for quick lookup when toggling.
   private nodeIndex: { [path: string]: FileNode } = {};
+  private includeGlobs: string[] = [];
+  private excludeGlobs: string[] = [];
 
-  constructor(includeGlobs: string[], excludeGlobs: string[]) {
-    // Immediately build the tree on construction
-    this.buildFileTree(includeGlobs, excludeGlobs);
+  constructor() {
+    this.loadConfig(); // Load config initially
   }
 
-  // Build the file tree structure from workspace files
-  private async buildFileTree(includeGlobs: string[], excludeGlobs: string[]) {
-    if (!vscode.workspace.workspaceFolders) return;
-    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri; // assuming single-root workspace
-    // Find files according to include/exclude globs
-    const fileUris = await vscode.workspace.findFiles(
-      includeGlobs.join(","), // combine patterns (glob syntax supports comma-separated)
-      excludeGlobs.join(",")
-    );
-    fileUris.sort(); // sort URIs alphabetically for stable tree order
+  private loadConfig() {
+    const config = vscode.workspace.getConfiguration("projectToText");
+    this.includeGlobs = config.get<string[]>("include") ?? ["**/*"];
+    this.excludeGlobs = config.get<string[]>("exclude") ?? [
+      "**/node_modules/**",
+      "**/.git/**",
+    ];
+    this.buildFileTree(); // Rebuild tree when config changes
+  }
+  // Refresh file tree
+  public async refresh(): Promise<void> {
+    await this.buildFileTree();
+    // The _onDidChangeTreeData event should be fired *after* the tree is built
+  }
 
-    // Build a nested tree out of the file paths
-    const dirMap = new Map<string, FileNode>(); // map folder path -> folder node
+  private async buildFileTree() {
+    if (!vscode.workspace.workspaceFolders) {
+      this.rootNodes = [];
+      this.nodeIndex = {};
+      this._onDidChangeTreeData.fire(undefined); // Refresh even if no workspace folders
+      return;
+    }
+
+    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri;
+    const fileUris = await vscode.workspace.findFiles(
+      this.includeGlobs.join(","),
+      this.excludeGlobs.join(",")
+    );
+    fileUris.sort((a, b) => a.fsPath.localeCompare(b.fsPath));
+
     this.rootNodes = [];
     this.nodeIndex = {};
+    const dirMap = new Map<string, FileNode>();
 
-    for (const uri of fileUris) {
-      const relativePath = vscode.workspace.asRelativePath(uri);
-      const segments = relativePath.split(/[\/\\]/); // support both separators
-      let currentPath = "";
-      let parentNodeArray = this.rootNodes;
-      // Iterate through path segments to create nodes
-      for (let i = 0; i < segments.length; i++) {
-        const name = segments[i];
-        currentPath = currentPath ? `${currentPath}/${name}` : name;
-        const isFile = i === segments.length - 1;
-        if (isFile) {
-          // Create file node
-          const fileNode = new FileNode(
-            uri,
-            name,
-            vscode.TreeItemCollapsibleState.None,
-            true
-          );
-          parentNodeArray.push(fileNode);
-          this.nodeIndex[currentPath] = fileNode;
-        } else {
-          // Directory segment
-          if (!this.nodeIndex[currentPath]) {
-            const folderNode = new FileNode(
-              vscode.Uri.joinPath(workspaceRoot, currentPath),
+    // ***  Use Promise.all to handle asynchronous setContextValue calls
+    await Promise.all(
+      fileUris.map(async (uri) => {
+        const relativePath = vscode.workspace.asRelativePath(uri);
+        const segments = relativePath.split(/[\/\\]/);
+        let currentPath = "";
+        let parentNodeArray = this.rootNodes;
+
+        for (let i = 0; i < segments.length; i++) {
+          const name = segments[i];
+          currentPath = currentPath ? `${currentPath}/${name}` : name;
+          const isFile = i === segments.length - 1;
+
+          if (isFile) {
+            const fileNode = new FileNode(
+              uri,
               name,
-              vscode.TreeItemCollapsibleState.Collapsed,
+              vscode.TreeItemCollapsibleState.None,
               true
             );
-            folderNode.children = [];
-            parentNodeArray.push(folderNode);
-            this.nodeIndex[currentPath] = folderNode;
+            parentNodeArray.push(fileNode);
+            this.nodeIndex[currentPath] = fileNode;
+            // We don't need to await setContextValue here; it's handled by Promise.all
+          } else {
+            if (!this.nodeIndex[currentPath]) {
+              const folderNode = new FileNode(
+                vscode.Uri.joinPath(workspaceRoot, currentPath),
+                name,
+                vscode.TreeItemCollapsibleState.Collapsed,
+                true
+              );
+              folderNode.children = [];
+              parentNodeArray.push(folderNode);
+              this.nodeIndex[currentPath] = folderNode;
+            }
+            parentNodeArray = (this.nodeIndex[currentPath] as FileNode)
+              .children!;
           }
-          // Move parentNodeArray reference to this folder's children for next iteration
-          parentNodeArray = (this.nodeIndex[currentPath] as FileNode).children!;
         }
+      })
+    ); // Close Promise.all here
+
+    this.sortNodes(this.rootNodes); // Sort after building
+    this._onDidChangeTreeData.fire(undefined); // Fire *after* Promise.all completes
+  }
+
+  private sortNodes(nodes: FileNode[]) {
+    nodes.sort((a, b) => {
+      if (
+        a.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed &&
+        b.collapsibleState !== vscode.TreeItemCollapsibleState.Collapsed
+      ) {
+        return -1; // Directories first
+      } else if (
+        a.collapsibleState !== vscode.TreeItemCollapsibleState.Collapsed &&
+        b.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed
+      ) {
+        return 1; // Files after directories
+      }
+      return a.label.localeCompare(b.label); // Then alphabetical
+    });
+    for (const node of nodes) {
+      if (node.children) {
+        this.sortNodes(node.children);
       }
     }
-    // Sort children of each directory node alphabetically (files vs folders can be mixed, but could sort by type if needed).
-    const sortNodes = (nodes: FileNode[]) => {
-      nodes.sort((a, b) => a.label.localeCompare(b.label));
-      for (const node of nodes) {
-        if (node.children) sortNodes(node.children);
-      }
-    };
-    sortNodes(this.rootNodes);
-    this._onDidChangeTreeData.fire(undefined); // refresh view
   }
 
   getChildren(element?: FileNode): FileNode[] {
     if (!element) {
-      // root level
       return this.rootNodes;
     }
     return element.children || [];
   }
 
   getTreeItem(element: FileNode): vscode.TreeItem {
-    // Build a new TreeItem instead of mutating the old one:
     const treeItem = new vscode.TreeItem(element.uri, element.collapsibleState);
-    // If you want to override the label
     treeItem.label = element.selected
       ? `[✓] ${element.label}`
       : `[ ] ${element.label}`;
     treeItem.description = element.selected ? "✓" : "";
     treeItem.tooltip = element.tooltip;
     treeItem.resourceUri = element.resourceUri;
+    treeItem.contextValue = element.contextValue; // Set contextValue for menu contributions
+
     return treeItem;
   }
 
-  // Toggle selection state of a file or folder node
   toggleFile(node: FileNode) {
     const newState = !node.selected;
     node.selected = newState;
-    // If a folder node is toggled, apply to all its descendants
-    if (node.children) {
-      const toggleChildren = (nodes: FileNode[]) => {
-        for (const child of nodes) {
-          child.selected = newState;
-          if (child.children) toggleChildren(child.children);
+
+    const toggleChildren = (nodes: FileNode[]) => {
+      for (const child of nodes) {
+        child.selected = newState;
+        if (child.children) {
+          toggleChildren(child.children);
         }
-      };
+      }
+    };
+
+    if (node.children) {
       toggleChildren(node.children);
     }
-    // Optionally, if a child file is deselected, you might also deselect its parent if no children remain selected (not strictly necessary).
-    this._onDidChangeTreeData.fire(node); // refresh this node (and possibly its children)
+    this._onDidChangeTreeData.fire(node);
   }
 
-  // Get URIs of all currently selected files (to include in output)
   getSelectedFiles(): vscode.Uri[] {
     const selected: vscode.Uri[] = [];
     const collectSelected = (nodes: FileNode[]) => {
       for (const node of nodes) {
         if (node.children) {
-          // directory node
           collectSelected(node.children);
         } else if (node.selected) {
           selected.push(node.uri);
@@ -248,6 +206,90 @@ class ProjectFileProvider implements vscode.TreeDataProvider<FileNode> {
     collectSelected(this.rootNodes);
     return selected;
   }
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  const treeDataProvider = new ProjectFileProvider();
+  vscode.window.registerTreeDataProvider("projectToText", treeDataProvider); // Corrected view ID
+
+  // Configuration change listener
+  vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration("projectToText")) {
+      treeDataProvider.refresh(); // Use the refresh method
+      vscode.window.showInformationMessage("Project to Text config updated!");
+    }
+  });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "projectToText.toggleFile",
+      (node: FileNode) => {
+        treeDataProvider.toggleFile(node);
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("projectToText.generate", async () => {
+      const filesToInclude = treeDataProvider.getSelectedFiles();
+      if (filesToInclude.length === 0) {
+        vscode.window.showWarningMessage(
+          "No files selected for Project to Text."
+        );
+        return;
+      }
+      const outputText = await generateStructuredText(filesToInclude);
+      const doc = await vscode.workspace.openTextDocument({
+        content: outputText,
+        language: "plaintext",
+      });
+      await vscode.window.showTextDocument(doc, { preview: false });
+    })
+  );
+  // Refresh command
+  context.subscriptions.push(
+    vscode.commands.registerCommand("projectToText.refresh", () => {
+      treeDataProvider.refresh();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("projectToText.generateQuick", async () => {
+      const config = vscode.workspace.getConfiguration("projectToText");
+      const includeGlobs = config.get<string[]>("include") ?? ["**/*"];
+      const excludeGlobs = config.get<string[]>("exclude") ?? [
+        "**/node_modules/**",
+        "**/.git/**",
+      ];
+      const files = await vscode.workspace.findFiles(
+        includeGlobs.join(","),
+        excludeGlobs.join(",")
+      );
+
+      const items = files.map((uri) => {
+        const rel = vscode.workspace.asRelativePath(uri);
+        return { label: rel, uri: uri, picked: true };
+      });
+
+      const selection = await vscode.window.showQuickPick(items, {
+        canPickMany: true,
+        title: "Select files to include",
+        placeHolder: "Choose files for Project to Text output",
+      });
+
+      if (!selection) {
+        return;
+      }
+
+      const chosenUris = selection.map((item) => item.uri);
+      const outputText = await generateStructuredText(chosenUris);
+      const doc = await vscode.workspace.openTextDocument({
+        content: outputText,
+        language: "plaintext",
+      });
+      vscode.window.showTextDocument(doc);
+    })
+  );
 }
 
 export function deactivate() {}

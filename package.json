@@ -2,7 +2,7 @@
   "name": "mrab-project-to-text",
   "displayName": "project-to-text",
   "description": "Convert your project to a text representation",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.97.0"
   },
@@ -23,20 +23,42 @@
       },
       {
         "command": "projectToText.toggleFile",
-        "title": "Project to Text: Toggle File"
+        "title": "Project to Text: Toggle File",
+        "icon": "$(checklist)"
       },
       {
         "command": "projectToText.generateQuick",
         "title": "Project to Text: Quick Generate"
+      },
+      {
+          "command": "projectToText.refresh",
+          "title": "Refresh",
+          "icon": "$(refresh)"
       }
     ],
     "views": {
-      "explorer": [
+      "sidebar": [
         {
-          "id": "projectToTextView",
+          "id": "projectToText",
           "name": "Project to Text: Select Files"
         }
       ]
+    },
+    "menus": {
+        "view/title": [
+            {
+                "command": "projectToText.refresh",
+                "group": "navigation",
+                "when": "view == projectToText"
+            }
+        ],
+      "view/item/context": [
+          {
+            "command": "projectToText.toggleFile",
+            "group": "inline",
+            "when": "view == projectToText && viewItem =~ /^(file|directory)$/"
+          }
+        ]
     },
     "configuration": {
       "type": "object",
@@ -54,7 +76,13 @@
           "description": "Glob patterns of files to exclude.",
           "default": [
             "**/node_modules/**",
-            "**/.git/**"
+            "**/.git/**",
+            "**/.vscode/**",
+            "**/out/**",
+            "**/dist/**",
+            "**/.vscode-test/**",
+            "LICENSE",
+            "README.md"
           ]
         }
       }
@@ -69,14 +97,15 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.97.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/vscode": "^1.97.0",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
     "@typescript-eslint/parser": "^8.22.0",
-    "eslint": "^9.19.0",
-    "typescript": "^5.7.3",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.2",
+    "eslint": "^9.19.0",
+    "typescript": "^5.7.3"
   }
 }
