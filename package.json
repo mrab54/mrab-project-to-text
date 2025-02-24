@@ -19,19 +19,23 @@
     "commands": [
       {
         "command": "projectToText.generate",
-        "title": "Project to Text: Generate"
+        "category": "Project to Text",
+        "title": "Generate"
       },
       {
         "command": "projectToText.toggleFile",
-        "title": "Project to Text: Toggle File",
+        "category": "Project to Text",
+        "title": "Toggle File",
         "icon": "$(checklist)"
       },
       {
         "command": "projectToText.generateQuick",
-        "title": "Project to Text: Quick Generate"
+        "category": "Project to Text",
+        "title": "Quick Generate"
       },
       {
           "command": "projectToText.refresh",
+          "category": "Project to Text",
           "title": "Refresh",
           "icon": "$(refresh)"
       }
