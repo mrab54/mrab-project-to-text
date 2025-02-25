@@ -1,8 +1,10 @@
 {
   "name": "mrab-project-to-text",
   "displayName": "project-to-text",
-  "description": "Convert your project to a text representation",
+  "description": "Convert your project to text",
   "version": "0.0.2",
+  "publisher": "mrab54",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.97.0"
   },
@@ -34,35 +36,59 @@
         "title": "Quick Generate"
       },
       {
-          "command": "projectToText.refresh",
-          "category": "Project to Text",
-          "title": "Refresh",
-          "icon": "$(refresh)"
+        "command": "projectToText.refresh",
+        "category": "Project to Text",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectToText.selectAll",
+        "category": "Project to Text",
+        "title": "Select All"
+      },
+      {
+        "command": "projectToText.selectNone",
+        "category": "Project to Text",
+        "title": "Select None"
       }
     ],
     "views": {
-      "sidebar": [
+      "explorer": [
         {
           "id": "projectToText",
-          "name": "Project to Text: Select Files"
+          "name": "Project to Text",
+          "contextualTitle": "Project to Text",
+          "type": "tree"
         }
       ]
     },
     "menus": {
-        "view/title": [
-            {
-                "command": "projectToText.refresh",
-                "group": "navigation",
-                "when": "view == projectToText"
-            }
-        ],
+      "view/title": [
+        {
+          "command": "projectToText.refresh",
+          "group": "navigation",
+          "when": "view == projectToText"
+        },
+        {
+          "command": "projectToText.selectNone",
+          "group": "navigation",
+          "icon": "$(checklist)",
+          "when": "view == projectToText"
+        },
+        {
+          "command": "projectToText.selectAll",
+          "group": "navigation",
+          "icon": "$(checklist)",
+          "when": "view == projectToText"
+        }
+      ],
       "view/item/context": [
-          {
-            "command": "projectToText.toggleFile",
-            "group": "inline",
-            "when": "view == projectToText && viewItem =~ /^(file|directory)$/"
-          }
-        ]
+        {
+          "command": "projectToText.toggleFile",
+          "group": "inline",
+          "when": "view == projectToText"
+        }
+      ]
     },
     "configuration": {
       "type": "object",
