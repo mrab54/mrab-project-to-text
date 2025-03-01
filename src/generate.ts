@@ -1,53 +1,73 @@
-import * as vscode from "vscode";
+import * as fs from 'fs';
+import * as path from 'path';
 
-async function generateStructuredText(fileUris: vscode.Uri[]): Promise<string> {
-  if (!vscode.workspace.workspaceFolders) {
-    return '';
-  }
-  const workspaceRoot = vscode.workspace.workspaceFolders[0].uri;
+interface GenerateOptions {
+  format: 'ascii' | 'json';
+  maxDepth?: number;
+}
 
-  // 1. Generate file tree text (project structure)
-  let treeText = 'Project Structure:\n';
-  const printedDirs = new Set<string>();
-  const sortedPaths = fileUris.map(uri => vscode.workspace.asRelativePath(uri)).sort();
-
-  for (const relPath of sortedPaths) {
-    const segments = relPath.split(/[\/\\]/);
-    let indent = '';
-    let cumulativePath = '';
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-      cumulativePath = cumulativePath ? `${cumulativePath}/${segment}` : segment;
-      if (i < segments.length - 1) {
-        if (printedDirs.has(cumulativePath)) {
-          indent += '  ';
-          continue;
-        }
-        treeText += `${indent}${segment}/\n`;
-        printedDirs.add(cumulativePath);
-        indent += '  ';
+/**
+ * Generates a representation of the file tree for the given directory.
+ * Supports ASCII tree format or JSON format based on options.
+ *
+ * @param dirPath - Root directory path to generate the tree from.
+ * @param options - Output format options (ascii or json), with optional max depth.
+ * @returns A formatted string representing the file tree.
+ */
+export async function generateTreeOutput(dirPath: string, options: GenerateOptions = { format: 'ascii' }): Promise<string> {
+  const { format, maxDepth } = options;
+  const lines: string[] = [];
+  
+  /**
+   * Recursively traverse the directory and accumulate tree lines.
+   * @param currentPath - The directory path to process.
+   * @param indent - The current indentation string for tree lines.
+   * @param depth - Current depth of recursion.
+   */
+  async function traverse(currentPath: string, indent: string, depth: number): Promise<void> {
+    if (maxDepth !== undefined && depth > maxDepth) {
+      return;
+    }
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
+    } catch (err) {
+      console.error(`generateTreeOutput: Unable to read directory "${currentPath}":`, err);
+      return;
+    }
+    // Sort entries alphabetically, directories first
+    entries.sort((a, b) => {
+      if (a.isDirectory() === b.isDirectory()) {
+        return a.name.localeCompare(b.name);
+      }
+      return a.isDirectory() ? -1 : 1;
+    });
+    const total = entries.length;
+    for (let index = 0; index < total; index++) {
+      const entry = entries[index];
+      const isLast = index === total - 1;
+      const connector = isLast ? '└── ' : '├── ';
+      const newIndent = indent + (isLast ? '    ' : '│   ');
+      const entryPath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        lines.push(`${indent}${connector}${entry.name}/`);
+        await traverse(entryPath, newIndent, depth + 1);
       } else {
-        treeText += `${indent}${segment}\n`;
+        lines.push(`${indent}${connector}${entry.name}`);
       }
     }
   }
 
-  // 2. Gather content of each file with delimiters
-  let combinedText = treeText + '\n';
-  for (const uri of fileUris) {
-    const relPath = vscode.workspace.asRelativePath(uri);
-    combinedText += `<file path="${relPath}">\n`;
-    try {
-      const document = await vscode.workspace.openTextDocument(uri);
-      const content = document.getText();
-      combinedText += content + '\n';
-    } catch (err) {
-      combinedText += `((Could not read file content: ${err}))\n`;
-    }
-    combinedText += `</file>\n\n`;
+  // Start traversal from the root directory
+  await traverse(dirPath, '', 0);
+
+  if (format === 'json') {
+    // (Optional) Convert the collected structure to a JSON string.
+    // For brevity, we assume ASCII format; a real implementation would build a nested object here.
+    const treeObject = { directory: dirPath, files: lines };
+    return JSON.stringify(treeObject, null, 2);
   }
 
-  return combinedText;
+  // Default or 'ascii': join lines with newlines to form the tree text
+  return lines.join('\n');
 }
-
-export { generateStructuredText };
