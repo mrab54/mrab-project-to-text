@@ -1,0 +1,142 @@
+{
+  "name": "mrab-project-to-text",
+  "displayName": "project-to-text",
+  "description": "Convert your project to text",
+  "version": "0.0.2",
+  "publisher": "mrab54",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mrab54/mrab-project-to-text.git"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "projectToText.generate",
+        "category": "Project to Text",
+        "title": "Generate"
+      },
+      {
+        "command": "projectToText.toggleFile",
+        "category": "Project to Text",
+        "title": "Toggle File",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "projectToText.generateQuick",
+        "category": "Project to Text",
+        "title": "Quick Generate"
+      },
+      {
+        "command": "projectToText.refresh",
+        "category": "Project to Text",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectToText.selectAll",
+        "category": "Project to Text",
+        "title": "Select All"
+      },
+      {
+        "command": "projectToText.selectNone",
+        "category": "Project to Text",
+        "title": "Select None"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "projectToText",
+          "name": "Project to Text",
+          "contextualTitle": "Project to Text",
+          "type": "tree"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "projectToText.refresh",
+          "group": "navigation",
+          "when": "view == projectToText"
+        },
+        {
+          "command": "projectToText.selectNone",
+          "group": "navigation",
+          "icon": "$(checklist)",
+          "when": "view == projectToText"
+        },
+        {
+          "command": "projectToText.selectAll",
+          "group": "navigation",
+          "icon": "$(checklist)",
+          "when": "view == projectToText"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "projectToText.toggleFile",
+          "group": "inline",
+          "when": "view == projectToText"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Project to Text Configuration",
+      "properties": {
+        "projectToText.include": {
+          "type": "array",
+          "description": "Glob patterns of files to include.",
+          "default": [
+            "**/*"
+          ]
+        },
+        "projectToText.exclude": {
+          "type": "array",
+          "description": "Glob patterns of files to exclude.",
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/.vscode/**",
+            "**/out/**",
+            "**/dist/**",
+            "**/.vscode-test/**",
+            "LICENSE",
+            "README.md"
+          ]
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "pnpm run compile && pnpm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "build": "vsce package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.97.0",
+    "@typescript-eslint/eslint-plugin": "^8.22.0",
+    "@typescript-eslint/parser": "^8.22.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.2",
+    "eslint": "^9.19.0",
+    "typescript": "^5.7.3"
+  }
+}
