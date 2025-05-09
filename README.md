@@ -1,53 +1,67 @@
-# mrab-project-to-text README
+# Project to Text VS Code Extension
 
-Convert your project files to text
+Concatenate and structure your project files for LLM or documentation consumption, with robust file selection and tree view.
 
 ## Features
 
-Convert your project files to text
+- Select files and folders to include using a tree view
+- Supports include/exclude globs (see settings)
+- One-click generation of a structured, LLM-friendly text output
+- Quick Generate: select files via a quick pick dialog
+- Handles edge cases and large projects robustly
 
 ## Requirements
 
-node, vscode
+- Node.js (v18+ recommended)
+- Visual Studio Code 1.97.0 or later
+
+## Usage
+
+1. Open your project in VS Code.
+2. Open the "Project to Text" view in the Explorer sidebar.
+3. Use the checkboxes to select files/folders, or use the context menu to toggle selection.
+4. Click the "Generate" command (from the view or command palette) to create a structured text document of your selected files.
+5. Use "Quick Generate" for a fast file picker experience.
 
 ## Extension Settings
 
-There are some settings somewhere
+This extension contributes the following settings (see VS Code settings under "Project to Text"):
+
+- `projectToText.include`: Array of glob patterns for files to include (default: `["**/*"]`).
+- `projectToText.exclude`: Array of glob patterns for files to exclude (default: `["**/node_modules/**", "**/.git/**", ...]`).
+
+## Commands
+
+- `Project to Text: Generate` – Generate structured text from selected files
+- `Project to Text: Quick Generate` – Use a quick pick dialog to select files
+- `Project to Text: Select All` / `Select None` – Quickly select or deselect all files
+- `Project to Text: Refresh` – Reload the file tree and settings
+
+## Testing
+
+Run all tests with:
+
+```sh
+pnpm test
+```
+
+All tests are pure mocks and do not require a real file system or VS Code instance.
 
 ## Known Issues
 
-Probably a few
+- File system warnings may appear in the test output; these are expected and do not affect test results.
+- Large projects may take a few seconds to scan on first load.
 
 ## Release Notes
 
-Initial release, quick generate seems to work
+### 0.0.2
+- Robust file selection and tree logic
+- Pure mock tests for all edge cases
+- All tests pass under VS Code extension test runner
 
-### 1.0.0
-
-Initial release, quick generate seems to work
+### 1.0.0 (planned)
+- Improved documentation and UX polish
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-I'll get around to that, maybe
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
- I'm already using that keystroke, damn
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy using Project to Text!**
