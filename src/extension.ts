@@ -84,12 +84,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       try {
         // We do simple join() for multiple globs. If you have multiple patterns, 
         // use brace expansion or call findFiles multiple times.
-        const uris = await vscode.workspace.findFiles(
-          includeGlobs.join(','),
-          excludeGlobs.join(',')
-        );
+        const uris = new Set<vscode.Uri>();
+        for (const includeGlob of includeGlobs) {
+          const foundUris = await vscode.workspace.findFiles(includeGlob, excludeGlobs.join(','));
+          foundUris.forEach((uri) => uris.add(uri));
+        }
 
-        const items = uris.map((uri) => ({
+        const items = Array.from(uris).map((uri) => ({
           label: vscode.workspace.asRelativePath(uri),
           uri,
           picked: true,
