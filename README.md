@@ -1,71 +1,67 @@
-# mrab-project-to-text README
+# Project to Text VS Code Extension
 
-This is the README for your extension "mrab-project-to-text". After writing up a brief description, we recommend including the following sections.
+Concatenate and structure your project files for LLM or documentation consumption, with robust file selection and tree view.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- Select files and folders to include using a tree view
+- Supports include/exclude globs (see settings)
+- One-click generation of a structured, LLM-friendly text output
+- Quick Generate: select files via a quick pick dialog
+- Handles edge cases and large projects robustly
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Node.js (v18+ recommended)
+- Visual Studio Code 1.97.0 or later
+
+## Usage
+
+1. Open your project in VS Code.
+2. Open the "Project to Text" view in the Explorer sidebar.
+3. Use the checkboxes to select files/folders, or use the context menu to toggle selection.
+4. Click the "Generate" command (from the view or command palette) to create a structured text document of your selected files.
+5. Use "Quick Generate" for a fast file picker experience.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension contributes the following settings (see VS Code settings under "Project to Text"):
 
-For example:
+- `projectToText.include`: Array of glob patterns for files to include (default: `["**/*"]`).
+- `projectToText.exclude`: Array of glob patterns for files to exclude (default: `["**/node_modules/**", "**/.git/**", ...]`).
 
-This extension contributes the following settings:
+## Commands
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- `Project to Text: Generate` – Generate structured text from selected files
+- `Project to Text: Quick Generate` – Use a quick pick dialog to select files
+- `Project to Text: Select All` / `Select None` – Quickly select or deselect all files
+- `Project to Text: Refresh` – Reload the file tree and settings
+
+## Testing
+
+Run all tests with:
+
+```sh
+pnpm test
+```
+
+All tests are pure mocks and do not require a real file system or VS Code instance.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- File system warnings may appear in the test output; these are expected and do not affect test results.
+- Large projects may take a few seconds to scan on first load.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.2
+- Robust file selection and tree logic
+- Pure mock tests for all edge cases
+- All tests pass under VS Code extension test runner
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+### 1.0.0 (planned)
+- Improved documentation and UX polish
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy using Project to Text!**
