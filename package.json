@@ -2,7 +2,7 @@
   "name": "mrab-project-to-text",
   "displayName": "project-to-text",
   "description": "Concatenate and structure your project files for LLM or documentation consumption, with robust file selection and tree view.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "mrab54",
   "license": "MIT",
   "engines": {
@@ -140,6 +140,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/sinon": "^17.0.4",
     "@types/vscode": "^1.97.0",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
     "@typescript-eslint/parser": "^8.22.0",
@@ -148,6 +149,7 @@
     "@vscode/vsce": "^3.3.2",
     "eslint": "^9.19.0",
     "mocha": "^11.2.2",
+    "sinon": "^20.0.0",
     "typescript": "^5.7.3"
   }
 }
